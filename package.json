@@ -6,7 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "server:start": "tsx server/server.ts",
+    "server:dev": "tsx watch server/server.ts",
+    "server:check": "tsc --noEmit -p server/tsconfig.json"
   },
   "private": true,
   "dependencies": {
@@ -20,9 +23,13 @@
     "@angular/platform-browser": "^19.1.0",
     "@angular/platform-browser-dynamic": "^19.1.0",
     "@angular/router": "^19.1.0",
+    "@openai/agents": "^0.18.0",
+    "dotenv": "^18.0.3",
+    "express": "^5.2.1",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.3",
     "tslib": "^2.3.0",
+    "zod": "^4.6.5",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
@@ -30,13 +37,16 @@
     "@angular/cli": "^19.1.1",
     "@angular/compiler-cli": "^19.1.0",
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/express": "^5.0.6",
     "@types/jasmine": "~5.1.0",
+    "@types/node": "^26.6.2",
     "jasmine-core": "~5.5.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "tsx": "^4.23.15",
     "typescript": "~5.7.2"
   }
 }

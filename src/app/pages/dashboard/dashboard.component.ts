@@ -7,6 +7,23 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 
+import { NexusApiService } from '../../core/nexus-api.service';
+import {
+  NexusDecision,
+  NexusEvent,
+} from '../../core/nexus.models';
+
+interface DashboardLog {
+  time: string;
+  agent: 'OOS_AGENT' | 'CRM_AGENT' | 'SWAP_AGENT';
+  message: string;
+  orderReference: string;
+  customer: string;
+  action: string;
+  type?: string;
+  incidentId?: string;
+  decision?: NexusDecision;
+}
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -23,9 +40,14 @@ import { MatTabsModule } from '@angular/material/tabs';
 })
 export class DashboardComponent {
 
+  private readonly nexusApi = inject(NexusApiService);
+
+  isSimulating = false;
+  activeIncidentId: string | null = null;
+
   selectedAgent = 'ALL';
 
-  logs = [
+  logs: DashboardLog[] = [
     {
       time: '09:14:02',
       agent: 'OOS_AGENT',
@@ -93,7 +115,7 @@ export class DashboardComponent {
     },
   ];
 
-  selectedLog = this.logs[0];
+  selectedLog: DashboardLog = this.logs[0];
 
   get filteredLogs() {
     if (this.selectedAgent === 'ALL') {
@@ -105,8 +127,96 @@ export class DashboardComponent {
     );
   }
 
-  selectLog(log: (typeof this.logs)[number]) {
+  selectLog(log: DashboardLog) {
     this.selectedLog = log;
+  }
+
+  simulateLiveIncident() {
+    if (this.isSimulating) {
+      return;
+    }
+
+    this.isSimulating = true;
+
+    this.nexusApi.simulateIncident().subscribe({
+      next: ({ incidentId }) => {
+        this.activeIncidentId = incidentId;
+
+        this.nexusApi.connectToIncidentEvents(incidentId).subscribe({
+          next: (event) => this.handleNexusEvent(event),
+
+          error: (error) => {
+            console.error('NexusCX SSE error:', error);
+            this.isSimulating = false;
+          },
+
+          complete: () => {
+            this.isSimulating = false;
+          },
+        });
+      },
+
+      error: (error) => {
+        console.error('Failed to simulate NexusCX incident:', error);
+        this.isSimulating = false;
+      },
+    });
+  }
+
+  private handleNexusEvent(event: NexusEvent) {
+    const log: DashboardLog = {
+      time: this.formatEventTime(event.timestamp),
+      agent: 'OOS_AGENT',
+      message: event.message,
+      orderReference: `Incident ${event.incidentId}`,
+      customer: 'Shopee Customer',
+      action: this.getEventAction(event),
+      type: event.type,
+      incidentId: event.incidentId,
+      decision: event.type === 'DECISION_MADE'
+        ? event.data
+        : undefined,
+    };
+
+    this.logs = [log, ...this.logs];
+    this.selectedLog = log;
+  }
+
+  private formatEventTime(timestamp: string): string {
+    return new Date(timestamp).toLocaleTimeString('en-PH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  }
+   
+  private getEventAction(event: NexusEvent): string {
+    switch (event.type) {
+      case 'INCIDENT_RECEIVED':
+        return 'NexusCX received the stockout incident';
+
+      case 'INVENTORY_CHECK':
+        return 'Checked seller and alternate inventory';
+
+      case 'INVENTORY_FOUND':
+        return 'Verified alternate fulfillment inventory';
+
+      case 'DECISION_MADE':
+        return 'NexusCX selected the recovery strategy';
+
+      case 'INVENTORY_RESERVED':
+        return 'Reserved alternate inventory';
+
+      case 'VIBER_OFFER_SENT':
+        return 'Recovery offer sent through Viber';
+
+      case 'INCIDENT_RECOVERED':
+        return 'Incident successfully recovered';
+
+      default:
+        return event.message;
+    }
   }
 
   resolutionDistribution = [
