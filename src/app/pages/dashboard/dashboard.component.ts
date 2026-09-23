@@ -8,10 +8,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 
 import { NexusApiService } from '../../core/nexus-api.service';
-import {
-  NexusDecision,
-  NexusEvent,
-} from '../../core/nexus.models';
+import { NexusDecision, NexusEvent } from '../../core/nexus.models';
+import { Router } from '@angular/router';
 
 interface DashboardLog {
   time: string;
@@ -41,6 +39,7 @@ interface DashboardLog {
 export class DashboardComponent {
 
   private readonly nexusApi = inject(NexusApiService);
+  private readonly router = inject(Router);
 
   isSimulating = false;
   activeIncidentId: string | null = null;
@@ -55,19 +54,16 @@ export class DashboardComponent {
         'Canceled Shopee Order #1234 → Taguig Hub Stock Available → Viber Offer Sent',
       orderReference: '2026093A9R2P04X (Shopee #1234)',
       customer: 'Maria Santos',
-      action:
-        'Triggered out-of-stock recovery workflow and customer outreach',
+      action: 'Triggered out-of-stock recovery workflow and customer outreach',
     },
 
     {
       time: '09:14:15',
       agent: 'CRM_AGENT',
-      message:
-        'Suppression Active on Customer: Maria Santos (ID: 9812)',
+      message: 'Suppression Active on Customer: Maria Santos (ID: 9812)',
       orderReference: 'CRM-9812',
       customer: 'Maria Santos',
-      action:
-        'Customer suppression guardrail activated',
+      action: 'Customer suppression guardrail activated',
     },
 
     {
@@ -77,8 +73,7 @@ export class DashboardComponent {
         'Option B Selected → GCash B2B Disbursement Executed (PHP 2,500) → Voucher Issued',
       orderReference: 'SWAP-2500-PHP',
       customer: 'Maria Santos',
-      action:
-        'GCash liquidity swap executed and recovery voucher generated',
+      action: 'GCash liquidity swap executed and recovery voucher generated',
     },
 
     {
@@ -88,8 +83,7 @@ export class DashboardComponent {
         'Viber Delivery Receipt Confirmed → Customer Maria Santos opened Recovery Voucher',
       orderReference: 'VBR-9812',
       customer: 'Maria Santos',
-      action:
-        'Recovery voucher delivery confirmed',
+      action: 'Recovery voucher delivery confirmed',
     },
 
     {
@@ -110,8 +104,7 @@ export class DashboardComponent {
         'Option A Selected → Lalamove API Express Dispatch Booked → Rider Assigned (LLM-8912)',
       orderReference: 'LLM-8912',
       customer: 'Maria Santos',
-      action:
-        'Express delivery dispatch booked and rider assigned',
+      action: 'Express delivery dispatch booked and rider assigned',
     },
   ];
 
@@ -122,9 +115,7 @@ export class DashboardComponent {
       return this.logs;
     }
 
-    return this.logs.filter(
-      (log) => log.agent === this.selectedAgent
-    );
+    return this.logs.filter((log) => log.agent === this.selectedAgent);
   }
 
   selectLog(log: DashboardLog) {
@@ -173,9 +164,7 @@ export class DashboardComponent {
       action: this.getEventAction(event),
       type: event.type,
       incidentId: event.incidentId,
-      decision: event.type === 'DECISION_MADE'
-        ? event.data
-        : undefined,
+      decision: event.type === 'DECISION_MADE' ? event.data : undefined,
     };
 
     this.logs = [log, ...this.logs];
@@ -190,7 +179,7 @@ export class DashboardComponent {
       hour12: false,
     });
   }
-   
+
   private getEventAction(event: NexusEvent): string {
     switch (event.type) {
       case 'INCIDENT_RECEIVED':
@@ -220,48 +209,53 @@ export class DashboardComponent {
   }
 
   resolutionDistribution = [
-  {
-    option: 'Option B',
-    title: 'Instant GCash Refund + ₱500 Voucher',
-    percentage: 68,
-    orders: 127,
-    description:
-      'Preferred by shoppers seeking liquidity with conversion-sensitive direct store credit.',
-  },
-  {
-    option: 'Option A',
-    title: 'Taguig Hub Same-Day Express Delivery',
-    percentage: 32,
-    orders: 60,
-    description:
-      'Preferred by loyal customers who want the skincare set delivered today without reordering friction.',
-  },
-];
+    {
+      option: 'Option B',
+      title: 'Instant GCash Refund + ₱500 Voucher',
+      percentage: 68,
+      orders: 127,
+      description:
+        'Preferred by shoppers seeking liquidity with conversion-sensitive direct store credit.',
+    },
+    {
+      option: 'Option A',
+      title: 'Taguig Hub Same-Day Express Delivery',
+      percentage: 32,
+      orders: 60,
+      description:
+        'Preferred by loyal customers who want the skincare set delivered today without reordering friction.',
+    },
+  ];
 
-webhookHealth = [
-  {
-    name: 'Shopee Open Platform API',
-    status: 'Healthy',
-    detail: 'Latency: 42ms',
-    meta: 'Auto-Cancel Hook',
-  },
-  {
-    name: 'GCash Enterprise Disbursement API',
-    status: 'Healthy',
-    detail: 'Latency: 118ms',
-    meta: 'Ref: 0002-CORP',
-  },
-  {
-    name: 'Viber Business Messaging Gateway',
-    status: 'Healthy',
-    detail: 'Delivery: 99.4%',
-    meta: 'VIP Recovery Bot',
-  },
-  {
-    name: 'Klaviyo / Braze CRM Webhook',
-    status: 'Healthy',
-    detail: 'Audience Shield',
-    meta: 'Instant Mute',
-  },
-];
+  webhookHealth = [
+    {
+      name: 'Shopee Open Platform API',
+      status: 'Healthy',
+      detail: 'Latency: 42ms',
+      meta: 'Auto-Cancel Hook',
+    },
+    {
+      name: 'GCash Enterprise Disbursement API',
+      status: 'Healthy',
+      detail: 'Latency: 118ms',
+      meta: 'Ref: 0002-CORP',
+    },
+    {
+      name: 'Viber Business Messaging Gateway',
+      status: 'Healthy',
+      detail: 'Delivery: 99.4%',
+      meta: 'VIP Recovery Bot',
+    },
+    {
+      name: 'Klaviyo / Braze CRM Webhook',
+      status: 'Healthy',
+      detail: 'Audience Shield',
+      meta: 'Instant Mute',
+    },
+  ];
+
+  navigateToAdmin() {
+
+    this.router.navigate(['/']);
+  }
 }
