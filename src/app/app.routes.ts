@@ -1,14 +1,15 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
-import { SettingsComponent } from './pages/settings/settings.component';
+import { AdminComponent } from './pages/admin/admin.component';
 
 export const routes: Routes = [
     {
         path: '',
-        component: DashboardComponent
+        component: AdminComponent
     },
     {
-        path: 'settings',
-        component: SettingsComponent
-    }
+        path: 'dashboard',
+        component: DashboardComponent
+    },
+  
 ];
