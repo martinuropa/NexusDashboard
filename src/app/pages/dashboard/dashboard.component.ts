@@ -7,6 +7,21 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 
+import { NexusApiService } from '../../core/nexus-api.service';
+import { NexusDecision, NexusEvent } from '../../core/nexus.models';
+import { Router } from '@angular/router';
+
+interface DashboardLog {
+  time: string;
+  agent: 'OOS_AGENT' | 'CRM_AGENT' | 'SWAP_AGENT';
+  message: string;
+  orderReference: string;
+  customer: string;
+  action: string;
+  type?: string;
+  incidentId?: string;
+  decision?: NexusDecision;
+}
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -23,9 +38,16 @@ import { MatTabsModule } from '@angular/material/tabs';
 })
 export class DashboardComponent {
 
+  private readonly nexusApi = inject(NexusApiService);
+  private readonly router = inject(Router);
+
+  isSimulating = false;
+  isLoadingIncident = false;
+  activeIncidentId: string | null = null;
+
   selectedAgent = 'ALL';
 
-  logs = [
+  logs: DashboardLog[] = [
     {
       time: '09:14:02',
       agent: 'OOS_AGENT',
@@ -33,19 +55,16 @@ export class DashboardComponent {
         'Canceled Shopee Order #1234 → Taguig Hub Stock Available → Viber Offer Sent',
       orderReference: '2026093A9R2P04X (Shopee #1234)',
       customer: 'Maria Santos',
-      action:
-        'Triggered out-of-stock recovery workflow and customer outreach',
+      action: 'Triggered out-of-stock recovery workflow and customer outreach',
     },
 
     {
       time: '09:14:15',
       agent: 'CRM_AGENT',
-      message:
-        'Suppression Active on Customer: Maria Santos (ID: 9812)',
+      message: 'Suppression Active on Customer: Maria Santos (ID: 9812)',
       orderReference: 'CRM-9812',
       customer: 'Maria Santos',
-      action:
-        'Customer suppression guardrail activated',
+      action: 'Customer suppression guardrail activated',
     },
 
     {
@@ -55,8 +74,7 @@ export class DashboardComponent {
         'Option B Selected → GCash B2B Disbursement Executed (PHP 2,500) → Voucher Issued',
       orderReference: 'SWAP-2500-PHP',
       customer: 'Maria Santos',
-      action:
-        'GCash liquidity swap executed and recovery voucher generated',
+      action: 'GCash liquidity swap executed and recovery voucher generated',
     },
 
     {
@@ -66,8 +84,7 @@ export class DashboardComponent {
         'Viber Delivery Receipt Confirmed → Customer Maria Santos opened Recovery Voucher',
       orderReference: 'VBR-9812',
       customer: 'Maria Santos',
-      action:
-        'Recovery voucher delivery confirmed',
+      action: 'Recovery voucher delivery confirmed',
     },
 
     {
@@ -88,70 +105,188 @@ export class DashboardComponent {
         'Option A Selected → Lalamove API Express Dispatch Booked → Rider Assigned (LLM-8912)',
       orderReference: 'LLM-8912',
       customer: 'Maria Santos',
-      action:
-        'Express delivery dispatch booked and rider assigned',
+      action: 'Express delivery dispatch booked and rider assigned',
     },
   ];
 
-  selectedLog = this.logs[0];
+  selectedLog: DashboardLog = this.logs[0];
 
   get filteredLogs() {
     if (this.selectedAgent === 'ALL') {
       return this.logs;
     }
 
-    return this.logs.filter(
-      (log) => log.agent === this.selectedAgent
-    );
+    return this.logs.filter((log) => log.agent === this.selectedAgent);
   }
 
-  selectLog(log: (typeof this.logs)[number]) {
+  selectLog(log: DashboardLog) {
     this.selectedLog = log;
   }
 
-  resolutionDistribution = [
-  {
-    option: 'Option B',
-    title: 'Instant GCash Refund + ₱500 Voucher',
-    percentage: 68,
-    orders: 127,
-    description:
-      'Preferred by shoppers seeking liquidity with conversion-sensitive direct store credit.',
-  },
-  {
-    option: 'Option A',
-    title: 'Taguig Hub Same-Day Express Delivery',
-    percentage: 32,
-    orders: 60,
-    description:
-      'Preferred by loyal customers who want the skincare set delivered today without reordering friction.',
-  },
-];
+  simulateLiveIncident() {
+    if (this.isSimulating) {
+      return;
+    }
 
-webhookHealth = [
-  {
-    name: 'Shopee Open Platform API',
-    status: 'Healthy',
-    detail: 'Latency: 42ms',
-    meta: 'Auto-Cancel Hook',
-  },
-  {
-    name: 'GCash Enterprise Disbursement API',
-    status: 'Healthy',
-    detail: 'Latency: 118ms',
-    meta: 'Ref: 0002-CORP',
-  },
-  {
-    name: 'Viber Business Messaging Gateway',
-    status: 'Healthy',
-    detail: 'Delivery: 99.4%',
-    meta: 'VIP Recovery Bot',
-  },
-  {
-    name: 'Klaviyo / Braze CRM Webhook',
-    status: 'Healthy',
-    detail: 'Audience Shield',
-    meta: 'Instant Mute',
-  },
-];
+    console.log('STEP 1: simulateLiveIncident clicked');
+
+    this.isSimulating = true;
+    this.isLoadingIncident = true;
+
+    setTimeout(() => {
+      console.log('STEP 2: calling simulateIncident API');
+
+      this.isLoadingIncident = false;
+
+      this.nexusApi.simulateIncident().subscribe({
+        next: ({ incidentId }) => {
+          console.log('STEP 3: API response', incidentId);
+
+          this.activeIncidentId = incidentId;
+
+          console.log('STEP 4: connecting to SSE');
+
+          this.nexusApi.connectToIncidentEvents(incidentId).subscribe({
+            next: (event) => {
+              console.log('STEP 5: SSE event', event.type);
+              this.handleNexusEvent(event);
+            },
+
+            error: (error) => {
+              console.error('SSE ERROR:', error);
+              this.isSimulating = false;
+            },
+
+            complete: () => {
+              console.log('SSE COMPLETE');
+              this.isSimulating = false;
+            },
+          });
+        },
+
+        error: (error) => {
+          console.error('API ERROR:', error);
+          this.isSimulating = false;
+        },
+      });
+    }, 1500);
+  }
+
+  private handleNexusEvent(event: NexusEvent) {
+    const log: DashboardLog = {
+      time: this.formatEventTime(event.timestamp),
+      agent: 'OOS_AGENT',
+      message: event.message,
+      orderReference: `Incident ${event.incidentId}`,
+      customer: 'Shopee Customer',
+      action: this.getEventAction(event),
+      type: event.type,
+      incidentId: event.incidentId,
+      decision:
+        event.type === 'DECISION_MADE'
+          ? event.data
+          : undefined,
+    };
+
+    this.logs = [log, ...this.logs];
+    this.selectedLog = log;
+
+    console.log('NexusCX Event:', event.type);
+
+    if (event.type === 'INCIDENT_RECOVERED') {
+      console.log('NexusCX workflow completed');
+
+      this.isSimulating = false;
+      this.isLoadingIncident = false;
+      this.activeIncidentId = null;
+    }
+  }
+
+  private formatEventTime(timestamp: string): string {
+    return new Date(timestamp).toLocaleTimeString('en-PH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  }
+
+  private getEventAction(event: NexusEvent): string {
+    switch (event.type) {
+      case 'INCIDENT_RECEIVED':
+        return 'NexusCX received the stockout incident';
+
+      case 'INVENTORY_CHECK':
+        return 'Checked seller and alternate inventory';
+
+      case 'INVENTORY_FOUND':
+        return 'Verified alternate fulfillment inventory';
+
+      case 'DECISION_MADE':
+        return 'NexusCX selected the recovery strategy';
+
+      case 'INVENTORY_RESERVED':
+        return 'Reserved alternate inventory';
+
+      case 'VIBER_OFFER_SENT':
+        return 'Recovery offer sent through Viber';
+
+      case 'INCIDENT_RECOVERED':
+        return 'Incident successfully recovered';
+
+      default:
+        return event.message;
+    }
+  }
+
+  resolutionDistribution = [
+    {
+      option: 'Option B',
+      title: 'Instant GCash Refund + ₱500 Voucher',
+      percentage: 68,
+      orders: 127,
+      description:
+        'Preferred by shoppers seeking liquidity with conversion-sensitive direct store credit.',
+    },
+    {
+      option: 'Option A',
+      title: 'Taguig Hub Same-Day Express Delivery',
+      percentage: 32,
+      orders: 60,
+      description:
+        'Preferred by loyal customers who want the skincare set delivered today without reordering friction.',
+    },
+  ];
+
+  webhookHealth = [
+    {
+      name: 'Shopee Open Platform API',
+      status: 'Healthy',
+      detail: 'Latency: 42ms',
+      meta: 'Auto-Cancel Hook',
+    },
+    {
+      name: 'GCash Enterprise Disbursement API',
+      status: 'Healthy',
+      detail: 'Latency: 118ms',
+      meta: 'Ref: 0002-CORP',
+    },
+    {
+      name: 'Viber Business Messaging Gateway',
+      status: 'Healthy',
+      detail: 'Delivery: 99.4%',
+      meta: 'VIP Recovery Bot',
+    },
+    {
+      name: 'Klaviyo / Braze CRM Webhook',
+      status: 'Healthy',
+      detail: 'Audience Shield',
+      meta: 'Instant Mute',
+    },
+  ];
+
+  navigateToAdmin() {
+
+    this.router.navigate(['/']);
+  }
 }
