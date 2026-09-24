@@ -7,7 +7,7 @@ const ORDER_ID = '1234';
 const PRODUCT = 'Skincare Set';
 const SELLER_STOCK = 0;
 const MAKATI_HUB_STOCK = 0;
-let taguigHubStock = 3;
+const TAGUIG_HUB_STOCK = 3;
 const reservations = new Set<string>();
 const inventoryChecks = new Set<string>();
 
@@ -18,6 +18,7 @@ function validateOrderAndProduct(orderId: string, product: string): void {
 }
 
 export function createInventoryTools(eventBus: IncidentEventBus, incidentId: string) {
+  let taguigHubStock = TAGUIG_HUB_STOCK;
   const checkInventory = tool({
     name: 'checkInventory',
     description: 'Check seller and warehouse stock for the cancelled order before choosing a recovery path.',

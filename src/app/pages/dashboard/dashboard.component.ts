@@ -42,6 +42,7 @@ export class DashboardComponent {
   private readonly router = inject(Router);
 
   isSimulating = false;
+  isLoadingIncident = false;
   activeIncidentId: string | null = null;
 
   selectedAgent = 'ALL';
@@ -127,31 +128,48 @@ export class DashboardComponent {
       return;
     }
 
+    console.log('STEP 1: simulateLiveIncident clicked');
+
     this.isSimulating = true;
+    this.isLoadingIncident = true;
 
-    this.nexusApi.simulateIncident().subscribe({
-      next: ({ incidentId }) => {
-        this.activeIncidentId = incidentId;
+    setTimeout(() => {
+      console.log('STEP 2: calling simulateIncident API');
 
-        this.nexusApi.connectToIncidentEvents(incidentId).subscribe({
-          next: (event) => this.handleNexusEvent(event),
+      this.isLoadingIncident = false;
 
-          error: (error) => {
-            console.error('NexusCX SSE error:', error);
-            this.isSimulating = false;
-          },
+      this.nexusApi.simulateIncident().subscribe({
+        next: ({ incidentId }) => {
+          console.log('STEP 3: API response', incidentId);
 
-          complete: () => {
-            this.isSimulating = false;
-          },
-        });
-      },
+          this.activeIncidentId = incidentId;
 
-      error: (error) => {
-        console.error('Failed to simulate NexusCX incident:', error);
-        this.isSimulating = false;
-      },
-    });
+          console.log('STEP 4: connecting to SSE');
+
+          this.nexusApi.connectToIncidentEvents(incidentId).subscribe({
+            next: (event) => {
+              console.log('STEP 5: SSE event', event.type);
+              this.handleNexusEvent(event);
+            },
+
+            error: (error) => {
+              console.error('SSE ERROR:', error);
+              this.isSimulating = false;
+            },
+
+            complete: () => {
+              console.log('SSE COMPLETE');
+              this.isSimulating = false;
+            },
+          });
+        },
+
+        error: (error) => {
+          console.error('API ERROR:', error);
+          this.isSimulating = false;
+        },
+      });
+    }, 1500);
   }
 
   private handleNexusEvent(event: NexusEvent) {
@@ -164,11 +182,24 @@ export class DashboardComponent {
       action: this.getEventAction(event),
       type: event.type,
       incidentId: event.incidentId,
-      decision: event.type === 'DECISION_MADE' ? event.data : undefined,
+      decision:
+        event.type === 'DECISION_MADE'
+          ? event.data
+          : undefined,
     };
 
     this.logs = [log, ...this.logs];
     this.selectedLog = log;
+
+    console.log('NexusCX Event:', event.type);
+
+    if (event.type === 'INCIDENT_RECOVERED') {
+      console.log('NexusCX workflow completed');
+
+      this.isSimulating = false;
+      this.isLoadingIncident = false;
+      this.activeIncidentId = null;
+    }
   }
 
   private formatEventTime(timestamp: string): string {

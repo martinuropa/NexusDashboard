@@ -1,3 +1,37 @@
+@if (isLoadingIncident) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm"
+  >
+    <div class="flex flex-col items-center gap-4">
+
+      <div class="relative flex h-16 w-16 items-center justify-center">
+        <div
+          class="absolute inset-0 rounded-full border-4 border-indigo-500/20"
+        ></div>
+
+        <div
+          class="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-indigo-500"
+        ></div>
+
+        <mat-icon class="!text-2xl text-indigo-400">
+          smart_toy
+        </mat-icon>
+      </div>
+
+      <div class="text-center">
+        <div class="font-mono text-sm font-semibold text-white">
+          NexusCX Agent Processing
+        </div>
+
+        <div class="mt-1 text-xs text-gray-400">
+          Verifying incident and checking inventory...
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
 <div class="grid grid-cols-4 items-center gap-4 mb-10
          outline outline-3 outline-custom-outline
          p-6 rounded-lg">
@@ -68,19 +102,34 @@
     </div>
 
 
-    <button type="button" (click)="simulateLiveIncident()" [disabled]="isSimulating" class="flex items-center gap-2
-             rounded-lg
-             bg-indigo-600
-             px-4 py-2.5
-             text-xs font-semibold
-             text-white
-             transition
-             hover:bg-indigo-500">
-      <mat-icon class="!text-sm">
-        play_circle
-      </mat-icon>
+    <button
+      type="button"
+      (click)="simulateLiveIncident()"
+      [disabled]="isSimulating"
+      class="flex items-center gap-2
+            rounded-lg
+            bg-indigo-600
+            px-4 py-2.5
+            text-xs font-semibold
+            text-white
+            transition
+            hover:bg-indigo-500
+            disabled:cursor-not-allowed
+            disabled:opacity-70"
+    >
+      @if (isSimulating) {
+        <mat-icon class="!text-sm animate-spin">
+          sync
+        </mat-icon>
 
-      {{ isSimulating ? 'Running Nexus Agent...' : 'Simulate Live Incident' }}
+        Running Nexus Agent...
+      } @else {
+        <mat-icon class="!text-sm">
+          play_circle
+        </mat-icon>
+
+        Simulate Live Incident
+      }
     </button>
 
   </div>
